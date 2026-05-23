@@ -13,38 +13,75 @@ class Llama3Agent:
         """Getter for the shared model instance"""
         return self.llm
 
-    def process(self, text: str, custom_prompt: str = None):
+    def process(self, body: str, subject: str):
         # The prompt is the "Brain". It defines all your previous agents in one list of instructions. 
 
         # print(f"\n[LLM] Analyzing input: {text[:50]}...") 
-        print(f"\n[LLM] Analyzing input: {text}...") 
+        # print(f"\n[LLM] Analyzing input: {text}...") 
+
+        combined_input = f"Subject: {subject}\nBody: {body}"
+        print(f"\n[LLM] Analyzing Body: {body[:50]}... | Subject: {subject}") 
+
+
+        # system_prompt = """
+        # You are a banking backend AI. Analyze the user's email and return ONLY a JSON object.
+        
+        # EXTRACT THE FOLLOWING:
+        # 1. summary: A 1-sentence summary of the request.
+        # 2. language: The language code (e.g. 'en', 'es', 'hi').
+        # 3. sentiment: {"label": "Positive/Neutral/Negative/Urgent", "score": float}
+        # 4. intents: A list of objects [{"intent": "Account Balance/Bank Statement/Credit Card Transactions", "confidence": float}]
+        # 5. entities: {
+        #     "customer_name": "Full name if found, else 'Not Found'",
+        #     "account_numbers": ["list of 9-12 digit numbers found"],
+        #     "card_numbers": ["list of card numbers found"],
+        #     "date_range": "e.g. Jan 2024 to March 2024, if found"
+        # }
+
+        # STRICT RULES:
+        # - Return ONLY valid JSON.
+        # - Do not explain yourself.
+        # - If data is missing, use null or empty lists.
+        # - Intents must be a LIST of separate objects. 
+        # - If the user asks for two things, provide TWO objects in the 'intents' list.
+        # - Do not combine intents like 'Balance/Statement'. Use separate entries.
+
+        # """
+
         system_prompt = """
         You are a banking backend AI. Analyze the user's email and return ONLY a JSON object.
         
         EXTRACT THE FOLLOWING:
-        1. summary: A 1-sentence summary of the request.
-        2. language: The language code (e.g. 'en', 'es', 'hi').
+        1. summary: A 1-sentence summary.
+        2. language: The language code ('en', 'es', 'hi').
         3. sentiment: {"label": "Positive/Neutral/Negative/Urgent", "score": float}
-        4. intents: A list of objects [{"intent": "Account Balance/Bank Statement/Credit Card Transactions", "confidence": float}]
+        4. intents: A list of objects [{"intent": "Account Balance", "confidence": float}]
+        
+        ALLOWED INTENTS (Choose ONLY from this list): 
+        - "Account Balance"
+        - "Bank Statement"
+        - "Credit Card Transactions"
+
         5. entities: {
             "customer_name": "Full name if found, else 'Not Found'",
-            "account_numbers": ["list of 9-12 digit numbers found"],
-            "card_numbers": ["list of card numbers found"],
-            "date_range": "e.g. Jan 2024 to March 2024, if found"
+            "account_numbers": ["list of numbers"],
+            "card_numbers": ["list of card numbers"],
+            "date_range": "Jan 2024 to March 2024"
         }
 
         STRICT RULES:
         - Return ONLY valid JSON.
-        - Do not explain yourself.
+        - **ONLY include an intent if the user explicitly asks for it.** 
+        - **DO NOT include intents with 0.0 confidence.**
         - If data is missing, use null or empty lists.
-        - Intents must be a LIST of separate objects. 
-        - If the user asks for two things, provide TWO objects in the 'intents' list.
-        - Do not combine intents like 'Balance/Statement'. Use separate entries.
-
+        - Do not combine intents like 'Balance/Statement'. Use separate entries in the list.
         """
 
+
         # Correct Llama 3 Prompt Format (No duplicate tokens)
-        prompt = f"<|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{text}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        # prompt = f"<|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{text}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        prompt = f"<|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{combined_input}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+
         
         output = self.llm(prompt, max_tokens=1024, stop=["<|eot_id|>"])
         response_text = output['choices'][0]['text']

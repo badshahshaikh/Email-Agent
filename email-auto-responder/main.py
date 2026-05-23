@@ -18,6 +18,7 @@ console = Console()
 bank_api = BankAPI()
 
 class EmailRequest(BaseModel):
+    subject: str
     body: str
     sender: str
 
@@ -49,9 +50,10 @@ async def process_email(request: EmailRequest):
     
     try:
         
-        audit_log("API_CALL", "STARTED", f"Processing email with body: {request.body[:50]}...")  # Log the start of processing
+        # audit_log("API_CALL", "STARTED", f"Processing email with body: {request.body[:50]}...")  # Log the start of processing
+        audit_log("API_CALL", "STARTED", f"From: {request.sender} | Sub: {request.subject}")
 
-        final_state = bot.analyze(request.body, request.sender)
+        final_state = bot.analyze(request.body, request.subject, request.sender)
 
         audit_log("API_CALL", "FINAL_ANALYSIS", f"Final analysis for email: {final_state}")
 

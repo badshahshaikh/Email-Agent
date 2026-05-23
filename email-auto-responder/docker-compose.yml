@@ -1,0 +1,46 @@
+services:
+  # 1. The Database
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: banking_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  # 2. The Brain (FastAPI Server)
+  api-server:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - API_URL=http://localhost:8001/process-email
+    depends_on:
+      - db
+    volumes:
+      - ./models:/app/models # Mount your model folder
+      - ./logs:/app/logs
+
+  # 3. The Hands (Background Worker)
+  email-worker:
+    build: .
+    command: python background_worker.py
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=db
+      - API_URL=http://api-server:8001/process-email # Calls the server container
+    depends_on:
+      - api-server
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  postgres_data:

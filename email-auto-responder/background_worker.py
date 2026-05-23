@@ -33,7 +33,8 @@ def run_auto_responder():
             for mail in unread_emails:
                 sender = mail['from_email']  # Extract just the email address
                 payload = {
-                    "body": mail['full_context'], 
+                    "subject": mail['subject'], 
+                    "body": mail['body'], 
                     "sender": sender
                 }
 

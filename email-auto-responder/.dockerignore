@@ -1,0 +1,6 @@
+models/*.gguf
+logs/*.log
+__pycache__/
+.env
+.git
+tests/

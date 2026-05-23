@@ -17,7 +17,8 @@ class AgentState(TypedDict):
     # raw_text: str
     # language: str
     # analysis: Dict
-    raw_text: str
+    raw_body: str      # Added
+    raw_subject: str   # Added
     sender_email: str
     intents: List[Dict]
     entities: Dict
@@ -49,8 +50,9 @@ class EmailOrchestrator:
 
     def node_understand_email(self, state: AgentState):
         print("--- Node: Understanding ---")
-        text = state['raw_text']
-        llama_results = self.llama_agent.process(text)
+        # text = state['raw_text']
+        llama_results = self.llama_agent.process(state['raw_body'], state['raw_subject'])
+
         # intents = self.intent_agent.process(text)
 
         entities = llama_results.get('entities')
@@ -125,11 +127,12 @@ class EmailOrchestrator:
     #     final_state = self.app.invoke(initial_state)
     #     return final_state['analysis']
     
-    def analyze(self, text: str, sender: str):
+    def analyze(self,body: str, subject: str, sender: str):
         # initial_state = {"raw_text": text, "sender_email": sender}
         # return self.app.invoke(initial_state)
         initial_state = {
-            "raw_text": text, 
+            "raw_body": body, 
+            "raw_subject": subject,
             "sender_email": sender,
             "intents": [],
             "entities": {},
