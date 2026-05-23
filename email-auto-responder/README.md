@@ -24,7 +24,7 @@ An AI-powered system that uses Llama 3 and Agentic AI (LangGraph) to process ban
 
 ### Option 1: One-Click Startup (Recommended)
 If you are on Windows, simply double-click the launcher script in the root directory:
-- **File:** `run_system.bat`
+- **File:** `run.bat`
 
 This will automatically open two separate terminal windows:
 1. **AI-SERVER:** Runs the FastAPI backend and loads the Llama 3 model.
