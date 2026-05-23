@@ -1,73 +1,10 @@
-# import imaplib
-# import smtplib
-# import email
-# import logging
-# from email.message import EmailMessage
-
-# class EmailService:
-#     def __init__(self, user, password):
-#         self.user = user
-#         self.password = password
-
-#     def fetch_unread_emails(self):
-#         """Connects to IMAP and gets unread messages"""
-#         try:
-#             mail = imaplib.IMAP4_SSL("imap.gmail.com")
-#             mail.login(self.user, self.password)
-#             mail.select("inbox")
-            
-#             # 1. Audit Log: Check Attempt
-#             logging.info("IMAP: Checking for new UNSEEN emails...")
-
-#             _, messages = mail.search(None, 'UNSEEN')
-#             email_ids = messages[0].split()
-            
-#             # 2. Audit Log: Results found
-#             logging.info(f"IMAP: Found {len(email_ids)} unread emails.")
-
-#             email_list = []
-
-#             for num in email_ids:
-#                 _, data = mail.fetch(num, '(RFC822)')
-#                 msg = email.message_from_bytes(data[0][1])
-
-#                 body = ""
-#                 if msg.is_multipart():
-#                     for part in msg.walk():
-#                         if part.get_content_type() == "text/plain":
-#                             payload = part.get_payload(decode=True)
-#                             if payload:
-#                                 body = payload.decode(errors='ignore')
-#                                 break
-#                 else:
-#                     payload = msg.get_payload(decode=True)
-#                     if payload:
-#                         body = payload.decode(errors='ignore')
-                
-#                 email_data = {
-#                     "from": msg['from'],
-#                     "subject": msg['subject'] or "No Subject",
-#                     "body": body or ""
-#                 }
-                
-#                 # 3. Audit Log: Individual Email Detail
-#                 logging.info(f"IMAP: Successfully read email from {email_data['from']}")
-#                 email_list.append(email_data)
-
-#             mail.logout()
-#             return email_list
-
-#         except Exception as e:
-#             logging.error(f"IMAP Error: {str(e)}")
-#             return []
-
 import smtplib
 import imaplib
 import logging
 import email
 import logging
 from email.message import EmailMessage
-
+from .text_preprocessor import TextPreprocessor
 
 class EmailService:
     def __init__(self, user, password):
@@ -75,6 +12,7 @@ class EmailService:
         self.password = password
         # This will store the ID of the last email seen when the script started
         self.last_seen_id = 0
+        self.preprocessor = TextPreprocessor
 
     def initialize_checkpoint(self):
         """Finds the ID of the latest email currently in the inbox"""
@@ -122,30 +60,49 @@ class EmailService:
                     _, data = mail.fetch(num_bytes, '(RFC822)')
                     msg = email.message_from_bytes(data[0][1])
 
-                    body = ""
-                    if msg.is_multipart():
-                        for part in msg.walk():
-                            if part.get_content_type() == "text/plain":
-                                payload = part.get_payload(decode=True)
-                                if payload:
-                                    body = payload.decode(errors='ignore')
-                                    break
-                    else:
-                        payload = msg.get_payload(decode=True)
-                        if payload:
-                            body = payload.decode(errors='ignore')
+                    raw_body = self._extract_body(msg)
+                    sender_raw = msg.get('From')
+                    sender_email = email.utils.parseaddr(sender_raw)[1] 
+
+                    cleaned_body = self.preprocessor.clean(raw_body)
+
+                    full_context = f"Subject: {msg['subject']}\nFrom: {sender_email}\nBody: {cleaned_body}"
+
+
+                    if cleaned_body:
+                        email_list.append({
+                            "from_email": sender_email,
+                            "subject": msg['subject'],
+                            "body": cleaned_body, # Pass the clean text
+                            "full_context": full_context
+                        })
+
+
+
+                    # body = ""
+                    # if msg.is_multipart():
+                    #     for part in msg.walk():
+                    #         if part.get_content_type() == "text/plain":
+                    #             payload = part.get_payload(decode=True)
+                    #             if payload:
+                    #                 body = payload.decode(errors='ignore')
+                    #                 break
+                    # else:
+                    #     payload = msg.get_payload(decode=True)
+                    #     if payload:
+                    #         body = payload.decode(errors='ignore')
                     
-                    email_data = {
-                        "from": msg['from'],
-                        "subject": msg['subject'] or "No Subject",
-                        "body": body or ""
-                    }
+                    # email_data = {
+                    #     "from": msg['from'],
+                    #     "subject": msg['subject'] or "No Subject",
+                    #     "body": body or ""
+                    # }
                     
-                    email_list.append({
-                        "from": msg['from'],
-                        "subject": msg['subject'],
-                        "body": body
-                    })
+                    # email_list.append({
+                    #     "from": msg['from'],
+                    #     "subject": msg['subject'],
+                    #     "body": body
+                    # })
                     
                     # Track the highest ID we've seen in this loop
                     if current_id > new_max_id:

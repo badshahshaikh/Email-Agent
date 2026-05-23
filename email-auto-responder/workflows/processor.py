@@ -3,9 +3,9 @@ from apis.bank_services import BankAPI
 from utils.security import audit_log
 
 class RequestWorkflow:
-    def __init__(self, nlp_results):
+    def __init__(self, nlp_results, bank_api_instance):
         self.results = nlp_results
-        self.api = BankAPI()
+        self.api = bank_api_instance
         self.supported_intents = ["Account Balance", "Credit Card Transactions", "Bank Statement"]
 
     def execute_actions(self):
@@ -64,34 +64,7 @@ class RequestWorkflow:
 
                 audit_log(customer, intent, data["status"])
 
-                # validation = self.api.ValidateCardAPI(card)
-                # if validation["status"] != "VALID":
-                #     final_responses.append({"intent": intent, "error": validation["error"]})
-                #     continue
-
-                # if data["status"] in ["ERROR", "FAILED"]:
-                #     final_responses.append({"intent": intent, "error": "System error. Please try again later."})
-                # else:
-                #     final_responses.append({"intent": intent, "data": data})
-
-                # if acc:
-                #     data = self.api.GetAccountBalanceAPI(acc)
-                #     final_responses.append({"intent": intent, "data": data})
-                #     audit_log(customer, intent, data.get("status", "FAILED"))
-                # else:
-                #     final_responses.append({"intent": intent, "error": "Missing account number."})
-
-
-            # 2. HANDLE CREDIT CARD
-            # elif intent == "Credit Card Transactions":
-            #     card = entities['card_numbers'][0] if entities.get('card_numbers') else None
-            #     if card:
-            #         data = self.api.GetCardTransactionsAPI(card)
-            #         final_responses.append({"intent": intent, "data": data})
-            #         audit_log(customer, intent, data.get("status", "FAILED"))
-            #     else:
-            #         final_responses.append({"intent": intent, "error": "Missing card number."})
-
+           
             # 3. HANDLE BANK STATEMENT
             elif intent == "Bank Statement":
                 acc = entities['account_numbers'][0] if entities.get('account_numbers') else None
@@ -112,12 +85,5 @@ class RequestWorkflow:
 
                 audit_log(customer, intent, data["status"])
 
-                # acc = entities['account_numbers'][0] if entities.get('account_numbers') else None
-                # if acc:
-                #     data = self.api.GetStatementAPI(acc)
-                #     final_responses.append({"intent": intent, "data": data})
-                #     audit_log(customer, intent, data.get("status", "FAILED"))
-                # else:
-                #     final_responses.append({"intent": intent, "error": "Account number required."})
                     
         return final_responses
